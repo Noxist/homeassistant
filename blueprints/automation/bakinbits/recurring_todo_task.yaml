@@ -1,0 +1,126 @@
+blueprint:
+  name: Recurring Todo Task
+  description: Create or update a recurring task; set persistent notification warnings
+    and reminders
+  domain: automation
+  input:
+    tasklist:
+      name: Todo List
+      description: List containing recurring tasks (must exist)
+      selector:
+        entity:
+          filter:
+          - domain:
+            - todo
+          multiple: false
+    taskname:
+      name: Item name
+      description: The name that represents the to-do item.
+    taskdescription:
+      name: Description
+      description: A more complete description of the to-do item than provided by
+        the item name.
+    duration:
+      name: Days until task is due
+      description: How often should task repeat once completed (number of days)
+      selector:
+        number:
+          min: 1.0
+          max: 365.0
+          mode: slider
+          step: 1.0
+    warn:
+      name: Days to warn
+      description: How many days in advance do you want to be notified of the upcoming
+        due date?
+      selector:
+        number:
+          min: 1.0
+          max: 365.0
+          mode: slider
+          step: 1.0
+  source_url: https://gist.github.com/bakinbits/5674f91d089f38f5ab12f21d19f8e7ea
+trigger:
+- platform: time_pattern
+  hours: /1
+condition: []
+action:
+- variables:
+    tasklist: !input tasklist
+    taskname: !input taskname
+    taskdescription: !input taskdescription
+    duration: !input duration
+    warn: !input warn
+  alias: Set Task Details
+- service: todo.get_items
+  target:
+    entity_id:
+    - '{{ tasklist }}'
+  data:
+    status: needs_action
+  response_variable: todos
+  alias: Get list of existing tasks
+- alias: If task exists...
+  if:
+  - condition: template
+    value_template: '{{taskname in todos[tasklist][''items''] | map(attribute=''summary'')
+      | list}}'
+    alias: See if task exists
+  then:
+  - alias: Task exists and is due today or overdue
+    if:
+    - condition: template
+      value_template: "{% for task in todos[tasklist][\"items\"] -%}\n  {% if task['summary']
+        == taskname %}\n    {% set delta = as_local(strptime(task['due'], \"%Y-%m-%d\"))
+        - today_at(\"00:00\") %} \n      {% if delta.days == 0 %} True\n      {% elif
+        delta.days < 0 %} True\n      {% elif delta.days > 0 %} False\n    {% endif
+        %}\n  {% endif %}\n{%- endfor %}"
+      alias: If task is due today or overdue...
+    then:
+    - service: persistent_notification.create
+      data:
+        notification_id: '{{ taskname }}'
+        title: 'Due: {{ taskname }}'
+        message: "{% for task in todos[tasklist][\"items\"] -%}\n  {% if task['summary']
+          == taskname %}\n     {% set delta = as_local(strptime(task['due'], \"%Y-%m-%d\"))
+          - today_at(\"00:00\") %} \n     {% if delta.days < 0 %} Task OVERDUE by
+          {{ (delta.days | abs) }} day(s)  {{ '\\n\\n' -}} {{ task['description']
+          }}\n     {% elif delta.days == 0 %} Task due TODAY  {{ '\\n\\n' -}} {{ task['description']
+          }}\n     {% endif %}\n  {% endif %}\n{%- endfor %}\n"
+      alias: Create or update Persistent Notification
+  - alias: Task exists and is within warning period
+    if:
+    - alias: If task is due today or overdue...
+      condition: template
+      value_template: "{% for task in todos[tasklist][\"items\"] -%}\n  {% if task['summary']
+        == taskname %}\n    {% set delta = as_local(strptime(task['due'], \"%Y-%m-%d\"))
+        - today_at(\"00:00\") %} \n      {% if delta.days > 0 and delta.days < warn
+        %} True\n    {% endif %}\n  {% endif %}\n{%- endfor %}"
+    then:
+    - service: persistent_notification.create
+      data:
+        notification_id: '{{ taskname }}'
+        title: 'Upcoming: {{ taskname }}'
+        message: "{% for task in todos[tasklist][\"items\"] -%}\n  {% if task['summary']
+          == taskname %}\n     {% set delta = as_local(strptime(task['due'], \"%Y-%m-%d\"))
+          - today_at(\"00:00\") %} \n     {% if delta.days > 0 %} Task due on {{ task['due']
+          }} {{ '\\n\\n' -}} {{ task['description'] }}\n     {% endif %}\n  {% endif
+          %}\n{%- endfor %}\n"
+      alias: Create or update Persistent Notification
+- alias: If task DOES NOT exist...
+  if:
+  - alias: Ensure task does NOT exist
+    condition: template
+    value_template: '{{taskname not in todos[tasklist][''items''] | map(attribute=''summary'')
+      | list}}'
+  then:
+  - variables:
+      newdue: '{{ (now() + timedelta(days=duration)).strftime(''%Y-%m-%d'') }}'
+  - service: todo.add_item
+    target:
+      entity_id: '{{ tasklist }}'
+    data:
+      due_date: '{{ newdue }}'
+      item: '{{ taskname }}'
+      description: '{{ taskdescription }}'
+    alias: Add new task with due date and description

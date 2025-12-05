@@ -1,0 +1,580 @@
+- id: '1735335903671'
+  alias: Schläfst du?
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.presence_sensor_fp2_09cc_presence_sensor_2
+    to: 'on'
+    trigger: state
+    from: 'off'
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+  conditions:
+  - condition: or
+    conditions:
+    - condition: time
+      after: '22:00:00'
+    - condition: time
+      before: 01:00:00
+  - condition: not
+    conditions:
+    - condition: device
+      type: is_on
+      device_id: 23d69d4a6c56cdeee20fcf306f8f1d41
+      entity_id: 5ae65df249bd45a17472fc6cdedc9ae8
+      domain: remote
+    - condition: state
+      entity_id: input_boolean.sleepmode
+      state: 'on'
+  actions:
+  - target:
+      entity_id: script.confirmable_notification
+    action: script.turn_on
+    data: {}
+  mode: single
+- id: '1735732006885'
+  alias: Wecker (Sanfter Aufwachmodus)
+  description: Startet mit Sonnenaufgangs-Lichtsimulation und fadet Musik langsam
+    ein.
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    - HEAD
+    - GET
+    local_only: false
+    webhook_id: wecker-7t7jw68mTI07x01ciOihziS5
+  conditions: []
+  actions:
+  - target:
+      device_id: a4d63920f60c87ba3ce1d5717e08991f
+    data:
+      volume_level: 0.05
+    action: media_player.volume_set
+  - target:
+      area_id: schlafzimmer
+    data:
+      brightness_pct: 1
+      rgb_color:
+      - 255
+      - 60
+      - 0
+    action: light.turn_on
+  - delay:
+      seconds: 2
+  - type: turn_on
+    device_id: 9ce38457712f334a7604c1ced4dfc860
+    entity_id: 1acb2e990d16b8f7c31d775c1bd42304
+    domain: switch
+  - target:
+      area_id: schlafzimmer
+    data:
+      transition: 300
+      brightness_pct: 80
+      rgb_color:
+      - 255
+      - 210
+      - 160
+    action: light.turn_on
+  - action: media_player.play_media
+    metadata: {}
+    data:
+      media:
+        media_content_id: library://playlist/54
+        media_content_type: playlist
+        metadata:
+          title: just business, darling.
+          thumbnail:
+          media_class: playlist
+          children_media_class: track
+          navigateIds:
+          - {}
+          - media_content_type: music_assistant
+            media_content_id: playlists
+          - media_content_type: music
+            media_content_id: library://playlist/54
+          browse_entity_id: media_player.leandro_2
+    target:
+      entity_id: media_player.leandro_2
+  - repeat:
+      count: 10
+      sequence:
+      - delay:
+          seconds: 20
+      - action: media_player.volume_set
+        target:
+          device_id: a4d63920f60c87ba3ce1d5717e08991f
+        data:
+          volume_level: '{{ state_attr(''media_player.leandro'', ''volume_level'')
+            | float(0) + 0.02 }}'
+  - repeat:
+      sequence:
+      - delay:
+          seconds: 30
+      - target:
+          area_id: schlafzimmer
+        action: light.turn_on
+        data: {}
+      - if:
+        - condition: not
+          conditions:
+          - condition: device
+            device_id: a0fbdcadbfbc22a4eb1bd7f699afb9f6
+            domain: media_player
+            entity_id: eb0e0b73f625d5fd3665a00575d235de
+            type: is_playing
+        then:
+        - target:
+            entity_id: media_player.leandro
+          data:
+            media:
+              media_content_id: FV:2/1
+              media_content_type: favorite_item_id
+              metadata:
+                title: James Bond Themes and All Songs
+                media_class: playlist
+                children_media_class:
+          action: media_player.play_media
+      - target:
+          entity_id: input_boolean.sleepmode
+        action: input_boolean.turn_off
+        data: {}
+      until:
+      - type: is_not_occupied
+        condition: device
+        device_id: 36f461e3e6f4a4ea7be04366d14bc428
+        entity_id: 045d4d308625b43c6e640eed04f25dab
+        domain: binary_sensor
+  mode: single
+- id: '1735764609775'
+  alias: Licht an
+  description: ''
+  triggers:
+  - type: occupied
+    device_id: 36f461e3e6f4a4ea7be04366d14bc428
+    entity_id: dabb1214c3d8bd63ba6f6ca9e1c7bef5
+    domain: binary_sensor
+    trigger: device
+  conditions:
+  - condition: sun
+    before: sunrise
+    after: sunset
+  - condition: and
+    conditions:
+    - condition: sun
+      before: sunrise
+      after: sunset
+    - condition: state
+      entity_id: input_boolean.sleepmode
+      state: 'off'
+    - condition: device
+      type: is_off
+      device_id: 23d69d4a6c56cdeee20fcf306f8f1d41
+      entity_id: 5ae65df249bd45a17472fc6cdedc9ae8
+      domain: remote
+  actions:
+  - action: light.turn_on
+    metadata: {}
+    data: {}
+    target:
+      area_id: schlafzimmer
+  mode: single
+- id: '1735836779905'
+  alias: Licht aus
+  description: ''
+  triggers:
+  - type: not_occupied
+    device_id: 36f461e3e6f4a4ea7be04366d14bc428
+    entity_id: dabb1214c3d8bd63ba6f6ca9e1c7bef5
+    domain: binary_sensor
+    trigger: device
+    for:
+      hours: 0
+      minutes: 2
+      seconds: 0
+  conditions: []
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    data: {}
+    target:
+      area_id: schlafzimmer
+  mode: single
+- id: '1735987948665'
+  alias: Gaming Mode
+  description: Aktiviert oder deaktiviert den Gaming Mode basierend auf den Zuständen
+    der Binary-Sensoren.
+  triggers:
+  - entity_id:
+    - binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_minecraft
+    - binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_fortnite
+    - binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_lunar
+    trigger: state
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: or
+        conditions:
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_epicgames
+          state: 'on'
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_minecraft
+          state: 'on'
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_lunar
+          state: 'on'
+      sequence:
+      - target:
+          entity_id: input_boolean.gaming
+        action: input_boolean.turn_on
+        data: {}
+    - conditions:
+      - condition: and
+        conditions:
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_epicgames
+          state: 'off'
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_minecraft
+          state: 'off'
+        - condition: state
+          entity_id: binary_sensor.usb_suchtismast_usb_suchtismast_namedwindow_lunar
+          state: 'off'
+      sequence:
+      - target:
+          entity_id: input_boolean.gaming
+        action: input_boolean.turn_off
+        data: {}
+  mode: parallel
+  max: 10
+- id: '1736323678196'
+  alias: Sleep mode cool down
+  description: ''
+  triggers:
+  - trigger: time
+    at: '13:00:00'
+  conditions: []
+  actions:
+  - action: input_boolean.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.sleepmode
+  mode: single
+- id: '1736717810857'
+  alias: TV Box Pause
+  description: ''
+  triggers:
+  - type: not_occupied
+    device_id: 36f461e3e6f4a4ea7be04366d14bc428
+    entity_id: dabb1214c3d8bd63ba6f6ca9e1c7bef5
+    domain: binary_sensor
+    trigger: device
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 5
+  conditions:
+  - condition: device
+    device_id: da28649fc066e405bb0f9fd33cd84771
+    domain: media_player
+    entity_id: 576e95f0397efafd3db1ec49a2dff85b
+    type: is_playing
+  actions:
+  - action: media_player.media_pause
+    metadata: {}
+    data: {}
+    target:
+      device_id: 23d69d4a6c56cdeee20fcf306f8f1d41
+  mode: single
+- id: '1736769779514'
+  alias: Computer an
+  description: ''
+  triggers:
+  - trigger: conversation
+    command: computer an
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 9ce38457712f334a7604c1ced4dfc860
+    entity_id: 1acb2e990d16b8f7c31d775c1bd42304
+    domain: switch
+  mode: single
+- id: '1736951397812'
+  alias: InBed
+  description: ''
+  triggers:
+  - type: occupied
+    device_id: 36f461e3e6f4a4ea7be04366d14bc428
+    entity_id: 045d4d308625b43c6e640eed04f25dab
+    domain: binary_sensor
+    trigger: device
+  conditions:
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: input_boolean.sleepmode
+      state: 'on'
+  actions:
+  - action: input_boolean.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.inbed
+  mode: single
+- id: '1736951436309'
+  alias: NotinBed
+  description: ''
+  triggers:
+  - type: not_occupied
+    device_id: 36f461e3e6f4a4ea7be04366d14bc428
+    entity_id: 045d4d308625b43c6e640eed04f25dab
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - action: input_boolean.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.inbed
+  mode: single
+- id: '1737127708553'
+  alias: Putzen
+  description: ''
+  use_blueprint:
+    path: trancefam/recurring_todo.yaml
+    input:
+      taskList: todo.putzen
+      taskName: Böden Saugen
+      recurDays: 3
+      recurTime: '20:20:00'
+- id: '1737361865265'
+  alias: Badezimmer Putzen
+  description: ''
+  use_blueprint:
+    path: trancefam/recurring_todo.yaml
+    input:
+      taskList: todo.putzen
+      taskName: Badezimmer Putzen
+      recurDays: 5
+      recurTime: 08:20:00
+- id: '1737362213768'
+  alias: Böden gesaugt
+  description: ''
+  triggers:
+  - trigger: tag
+    tag_id: b9887563-0fc4-4b8c-84fb-669bb4123e3b
+  conditions: []
+  actions:
+  - action: todo.remove_item
+    metadata: {}
+    data:
+      item: Böden Saugen
+    target:
+      entity_id: todo.putzen
+  mode: single
+- id: '1737398539086'
+  alias: Badezimmer geputzt
+  description: ''
+  triggers:
+  - trigger: tag
+    tag_id: b3c4adce-552c-4aba-920a-bbb828cc2ce0
+  conditions: []
+  actions:
+  - action: todo.remove_item
+    metadata: {}
+    data:
+      item: Badezimmer Putzen
+    target:
+      entity_id: todo.putzen
+  mode: single
+- id: '1751318359540'
+  alias: ac on (Stream Deck)
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: false
+    webhook_id: ac_machine
+  conditions: []
+  actions:
+  - action: climate.toggle
+    metadata: {}
+    data: {}
+    target:
+      area_id: leandro
+      device_id: 3a3ec25cf46caebd0322b024bced6968
+  mode: single
+- id: '1751318821864'
+  alias: licht_an_aus
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: false
+    webhook_id: licht_an_aus
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      area_id: schlafzimmer
+  mode: single
+- id: '1751318995026'
+  alias: richt_licht_an_aus
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: false
+    webhook_id: richt_licht_an_aus
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      device_id: ec0bc4ea01ccd1e60afb7ce9e247fcee
+  mode: single
+- id: '1751319392954'
+  alias: Steh_licht_an_aus
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: false
+    webhook_id: Steh_licht_an_aus
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      device_id: 8b50ca414ecb5cd0c41cc0ba305191b7
+  mode: single
+- &id001
+  id: nfc_bom_random_print
+  alias: NFC → BOM Verse Print via MQTT
+  triggers:
+  - event_type: tag_scanned
+    event_data:
+      tag_id: DEIN_TAG_ID
+    trigger: event
+  actions:
+  - target:
+      entity_id: sensor.bom_random_verse
+    action: homeassistant.update_entity
+    data: {}
+  - delay:
+      seconds: 1
+  - data:
+      topic: Prn20B1B50C2199
+      qos: 1
+      retain: false
+      payload_template: "{\n  \"title\": \"{{ state_attr('sensor.bom_random_verse',
+        'reference') | default('Error: Title not found') }}\",\n  \"text\": \"{{ state_attr('sensor.bom_random_verse',
+        'text') | default('Error: Verse text not found') }}\"\n}\n"
+    action: mqtt.publish
+- *id001
+- *id001
+- *id001
+- id: '1756244898471'
+  alias: Webhook → BoM-Zufallsvers drucken
+  description: ''
+  triggers:
+  - trigger: webhook
+    webhook_id: bom_print
+    allowed_methods:
+    - POST
+    - GET
+    local_only: true
+  conditions: []
+  actions:
+  - action: rest_command.print_bom_random
+  - data:
+      title: Printer API
+      message: Befehl an rest_command.print_bom_random gesendet.
+    action: persistent_notification.create
+  mode: single
+- id: '1756330940736'
+  alias: Morning agenda to printer
+  triggers:
+  - trigger: time
+    at: 07:00:00
+  conditions: []
+  actions:
+  - action: calendar.get_events
+    target:
+      entity_id: calendar.termine
+    data:
+      start_date_time: '{{ now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        }}'
+      end_date_time: "{{ (now().replace(hour=0, minute=0, second=0, microsecond=0)\n
+        \   + timedelta(days=1)).isoformat() }}"
+    response_variable: calresp
+  - variables:
+      _ev: "{{ calresp['calendar.termine'].events\n   if calresp and calresp['calendar.termine']
+        is defined else [] }}"
+      lines: "{%- set out = [] -%} {%- for e in _ev -%}\n  {%- set when = as_datetime(e.start)
+        if e.start is defined and e.start else now() -%}\n  {%- set _ = out.append(
+        when.strftime('%H:%M') ~ '  ' ~ (e.summary | default('Ohne Titel')) ) -%}\n{%-
+        endfor -%} {{ out if out|length > 0 else ['Keine Termine'] }}"
+  - action: rest_command.printer_template
+    data:
+      title: AGENDA
+      lines: '{{ (lines | default([])) | tojson }}'
+      add_datetime: false
+      cut: true
+  mode: single
+- id: '1756762063560'
+  alias: Random BoM Verse
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    - HEAD
+    - GET
+    local_only: false
+    webhook_id: -1aDUqMGg2S_lsghC155yDjg9
+  conditions: []
+  actions:
+  - action: rest_command.print_bom
+    data: {}
+  mode: single
+- id: '1764597118218'
+  alias: New automation
+  description: ''
+  triggers:
+  - trigger: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    - HEAD
+    - GET
+    local_only: false
+    webhook_id: -mnX9uonKoq30qfwX5bvQc556
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.richtlampe
+  mode: single

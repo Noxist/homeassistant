@@ -1,0 +1,111 @@
+blueprint:
+  name: Recurring todo
+  description: "Setup a recurring todo to always appear on a specified list. Performs:\n
+    \ 1. When the list is modified in any way this automation will trigger, wait 20
+    seconds, then\n  2. Removes the 'item name' if it is completed in the todo list,
+    then\n  3. If the 'item name' does not exist in the todo list as an incomplete
+    item (this prevents duplicates):\n      1. Adds a new entry for 'item name' set
+    for the number of days specified away from today, with the specifie due time \n\n###
+    Note: in order for the todo to first display, make any modification (add/remove/complete
+    an item on the list) after saving this automation"
+  domain: automation
+  input:
+    taskList:
+      name: Todo List
+      description: List containing recurring tasks (must exist)
+      selector:
+        entity:
+          filter:
+          - domain:
+            - todo
+          multiple: false
+    taskName:
+      name: Item name
+      description: The name that represents the to-do item.
+    taskDescription:
+      name: Description
+      description: A more complete description of the to-do item than provided by
+        the item name.
+      default: ' '
+    recurDays:
+      name: Days until task is due
+      description: How often should task repeat once completed (number of days)
+      selector:
+        number:
+          min: 1.0
+          max: 365.0
+          mode: slider
+          step: 1.0
+    recurTime:
+      name: Recur time (24hr)
+      description: What time should the task repeat in 24 hour time (HH:MM:SS format)
+      selector:
+        time: {}
+      default: 43200
+  source_url: https://gist.github.com/trancefam/60c25087af96c6dc3dbdb944565ef0f7
+mode: restart
+max_exceeded: silent
+trigger:
+- platform: state
+  entity_id:
+  - !input taskList
+condition: []
+action:
+- delay: 00:00:20
+  alias: Wait 20 seconds before modifying list, in case change was an accident
+- variables:
+    taskList: !input taskList
+    taskName: !input taskName
+    taskDescription: !input taskDescription
+    recurDays: !input recurDays
+    recurTime: !input recurTime
+  alias: Set Task Details
+- service: todo.get_items
+  metadata: {}
+  data:
+    status:
+    - completed
+  target:
+    entity_id: '{{ taskList }}'
+  response_variable: completedTasks
+  alias: Get all completedTasks
+- if:
+  - condition: template
+    value_template: '{{taskName in completedTasks[taskList][''items''] | map(attribute=''summary'')
+      | list}}'
+    alias: If todo exists and is completed
+  then:
+  - service: todo.remove_item
+    metadata: {}
+    data:
+      item: '{{ taskName }}'
+    target:
+      entity_id: '{{ taskList }}'
+  alias: If todo is completed, remove it from list
+- alias: Get allTasks
+  service: todo.get_items
+  metadata: {}
+  data:
+    status:
+    - completed
+    - needs_action
+  target:
+    entity_id: '{{ taskList }}'
+  response_variable: allTasks
+- alias: If todo is not in the list already, add it with new due date and time
+  if:
+  - alias: Todo does not exist
+    condition: template
+    value_template: '{{ taskName not in allTasks[taskList][''items''] | map(attribute=''summary'')
+      | list}}'
+  then:
+  - variables:
+      newDueDate: '{{ (now() + timedelta(days=recurDays)).strftime(''%Y-%m-%d'') }}'
+  - service: todo.add_item
+    metadata: {}
+    data:
+      item: '{{ taskName }}'
+      description: '{{ taskDescription }}'
+      due_datetime: '{{ newDueDate }} {{ recurTime }}'
+    target:
+      entity_id: '{{ taskList }}'

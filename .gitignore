@@ -1,0 +1,25 @@
+# Home Assistant .gitignore (Recommended)
+
+# 1. AUSSCHLUSS EMPFINDLICHER DATEN UND SCHLÜSSEL
+# Dies verhindert das Hochladen von Passwörtern, Tokens und API-Schlüsseln.
+secrets.yaml
+
+# 2. AUSSCHLUSS INTERNER HA-DATENBANKEN & LOGS
+# Enthält den Verlauf und Protokolldaten.
+*.log
+*.db
+*.db-shm
+*.db-wal
+home-assistant_v2.db
+
+# 3. AUSSCHLUSS DES VERSTECKTEN SPEICHERORDNERS (.STORAGE)
+# WICHTIG: Hier sind die meisten OAuth-Tokens (wie die Google-Tokens, die den Push blockiert haben),
+# Geräteregistrierungen und einige Add-on-Konfigurationen gespeichert.
+.storage/
+
+# 4. AUSSCHLUSS TEMPORÄRER DATEIEN
+# System- und Cache-Dateien, die nicht versionskontrolliert werden müssen.
+.cloud/
+.google.token
+__pycache__/
+deps/

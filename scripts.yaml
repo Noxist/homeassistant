@@ -1,0 +1,74 @@
+confirmable_notification:
+  alias: Confirmable Notification
+  use_blueprint:
+    path: homeassistant/confirmable_notification.yaml
+    input:
+      notify_device: 6cc8673ed3db8cee15f91183b45c5d49
+      title: Sleep?
+      message: Are you going to sleep?
+      confirm_action:
+      - data:
+          message: command_dnd
+          data:
+            command: priority_only
+        action: notify.mobile_app_pixel_9_pro_xl
+      - target:
+          area_id: schlafzimmer
+        action: light.turn_off
+        data: {}
+      - target:
+          entity_id: input_boolean.sleepmode
+        action: input_boolean.turn_on
+        data: {}
+      - if:
+        - condition: state
+          entity_id: sensor.pixel_9_pro_xl_next_alarm
+          state: unavailable
+        - condition: and
+          conditions:
+          - condition: time
+            weekday:
+            - mon
+            - tue
+            - wed
+            - thu
+            - sat
+            - sun
+        then:
+        - target:
+            device_id: a0fbdcadbfbc22a4eb1bd7f699afb9f6
+          data:
+            volume_level: 0.25
+          action: media_player.volume_set
+        - target:
+            entity_id: media_player.leandro_2
+          data:
+            media_content_id: media-source://tts/cloud?message=You+haven%27t+set+an+alarm+clock%21&language=en-US&voice=JennyNeural
+            media_content_type: provider
+          action: media_player.play_media
+      - type: turn_off
+        device_id: 9ce38457712f334a7604c1ced4dfc860
+        entity_id: 1acb2e990d16b8f7c31d775c1bd42304
+        domain: switch
+      confirm_text: Schlafen!
+      dismiss_text: Tu nur so!
+  description: ''
+lamotrigin:
+  use_blueprint:
+    path: homeassistant/confirmable_notification.yaml
+    input:
+      notify_device: 6cc8673ed3db8cee15f91183b45c5d49
+      title: Lamotrigin
+      message: Hast du dein Lamotrigin genommen?
+      confirm_text: Ja
+      dismiss_text: Nein
+      confirm_action:
+      - action: todo.update_item
+        metadata: {}
+        data:
+          item: Lamotrigin
+          status: completed
+        target:
+          entity_id: todo.medikamente
+  alias: Lamotrigin
+  description: ''

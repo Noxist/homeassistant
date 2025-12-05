@@ -1,0 +1,193 @@
+# ---------------- Basics ----------------
+default_config:
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# ---------------- Inputs ----------------
+input_datetime:
+  next_alarm:
+    name: Next scheduled alarm
+    has_date: true
+    has_time: true
+
+input_number:
+  wakehour_1:
+    name: Wake Hour 1
+    min: 0
+    max: 23
+    step: 1
+  wakeminutes_1:
+    name: Wake Minutes 1
+    min: 0
+    max: 59
+    step: 1
+
+input_boolean:
+  wakestatus_1:
+    name: Wake Status 1
+    initial: false
+  wakeactivated_1:
+    name: Wake Activated 1
+    initial: false
+  wakeweekday_sun_1:
+    name: Wake Weekday Sunday 1
+    initial: false
+  wakeweekday_mon_1:
+    name: Wake Weekday Monday 1
+    initial: false
+  wakeweekday_tue_1:
+    name: Wake Weekday Tuesday 1
+    initial: false
+  wakeweekday_wed_1:
+    name: Wake Weekday Wednesday 1
+    initial: false
+  wakeweekday_thu_1:
+    name: Wake Weekday Thursday 1
+    initial: false
+  wakeweekday_fri_1:
+    name: Wake Weekday Friday 1
+    initial: false
+  wakeweekday_sat_1:
+    name: Wake Weekday Saturday 1
+    initial: false
+
+# ---------------- Sensors ----------------
+sensor:
+  - platform: time_date
+    display_options:
+      - "time"
+
+  - platform: template
+    sensors:
+      wake_time_1:
+        friendly_name: "Weckzeit 1"
+        device_class: timestamp
+        value_template: >
+          {% set current_time = now() %}
+          {% set weekdays = {
+            'sun': 'input_boolean.wakeweekday_sun_1',
+            'mon': 'input_boolean.wakeweekday_mon_1',
+            'tue': 'input_boolean.wakeweekday_tue_1',
+            'wed': 'input_boolean.wakeweekday_wed_1',
+            'thu': 'input_boolean.wakeweekday_thu_1',
+            'fri': 'input_boolean.wakeweekday_fri_1',
+            'sat': 'input_boolean.wakeweekday_sat_1'
+          } %}
+          {% set today = now().strftime('%a').lower() %}
+          {% set wake_time_today = current_time.replace(
+               hour=states('input_number.wakehour_1')|int,
+               minute=states('input_number.wakeminutes_1')|int,
+               second=0, microsecond=0) %}
+          {% if not is_state('input_boolean.wakestatus_1', 'on') %}
+            {{ None }}
+          {% elif is_state(weekdays[today], 'on') and wake_time_today >= current_time %}
+            {{ wake_time_today.isoformat() }}
+          {% else %}
+            {% for i in range(1, 8) %}
+              {% set next_day = (current_time + timedelta(days=i)).strftime('%a').lower() %}
+              {% if is_state(weekdays[next_day], 'on') %}
+                {{ (wake_time_today + timedelta(days=i)).isoformat() }}
+                {% break %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        entity_id:
+          - sensor.time
+          - input_number.wakehour_1
+          - input_number.wakeminutes_1
+          - input_boolean.wakestatus_1
+          - input_boolean.wakeweekday_sun_1
+          - input_boolean.wakeweekday_mon_1
+          - input_boolean.wakeweekday_tue_1
+          - input_boolean.wakeweekday_wed_1
+          - input_boolean.wakeweekday_thu_1
+          - input_boolean.wakeweekday_fri_1
+          - input_boolean.wakeweekday_sat_1
+
+# ---------------- Printer REST Commands ----------------
+rest_command:
+  print_bom:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/bom?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+
+  print_dadjoke:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/dadjoke?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+
+  print_funfact:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/fun?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+
+  print_weather_bern:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/weather_bern?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+
+  print_weather_unterseen:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/weather_unterseen?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+
+  print_news_headline:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/news?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: "28b79b77e1fc0b7e4f99856f7a01c458"
+    content_type: "application/json"
+    payload: "{}"
+    timeout: 15
+    
+  print_dm_en:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/dm_en?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: !secret printer_api_key
+      content_type: "application/json"
+    payload: "{}"
+    timeout: 20
+
+  print_dm_de:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/dm_de?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: !secret printer_api_key
+      content_type: "application/json"
+    payload: "{}"
+    timeout: 20
+
+  print_dm_both:
+    url: "https://printer-splitted-3.onrender.com/api/print/source/dm_both?as_png=0&also_print=1"
+    method: POST
+    headers:
+      x-api-key: !secret printer_api_key
+      content_type: "application/json"
+    payload: "{}"
+    timeout: 20
